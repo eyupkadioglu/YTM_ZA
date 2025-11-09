@@ -566,10 +566,12 @@ textarea{ min-height:44px; }
     const ctrl = new AbortController();
     const timer = setTimeout(()=>ctrl.abort(), 15000);
     try{
-      const resp = await fetch(GAS_URL, {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(rowObj), signal: ctrl.signal
-      });
+const resp = await fetch(GAS_URL, {
+  method:'POST',
+  headers:{ 'Content-Type':'text/plain;charset=utf-8' }, // ← preflight yok
+  body: JSON.stringify(rowObj),
+  signal: ctrl.signal
+});
       clearTimeout(timer);
       const js = await resp.json();
       if(!resp.ok || !js.ok){ throw new Error(js.error || ('HTTP '+resp.status)); }
