@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>YTM Başvuru Formu — Tek Sayfa PDF</title>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<!-- ✅ XLSX için SheetJS -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --blue-dark:#003366; --ink:#0f172a; --muted:#6b7280; --line:#d8dee9;
+  --accent:#2563eb; --err:#ef4444;
+}
+html,body{background:#fff;color:var(--ink)}
+body{font-family:Arial,Helvetica,sans-serif;margin:0;font-size:14.3px}
+#print-area{width:760px;max-width:760px;margin:0 auto;box-sizing:border-box}
+.wrap{max-width:850px;margin:12px auto;background:#fff;border:1px solid #d1d5db;border-radius:10px;box-shadow:0 6px 18px rgba(16,24,40,.06)}
+.header{background:linear-gradient(180deg,#0b3a7a 0%, var(--blue-dark) 100%);color:#fff;text-align:center;padding:12px 8px 10px}
+.header h2{margin:0;font-size:1.18rem}
+.header p{margin:2px 0;font-size:.84rem;color:#e7e9ef}
+.header h3{margin:6px auto 0;max-width:90%;font-size:.9rem;line-height:1.35;font-weight:500;color:#eef2ff}
+.card{padding:12px 16px}
+.bolumkutu input,.bolumkutu select,.bolumkutu textarea,.ek-belgeler input[type="file"]{box-sizing:border-box;width:100%;max-width:100%;display:block}
+label{display:block;margin:4px 0 2px;font-weight:700;font-size:0.9rem}
+input,select,textarea{padding:7px 9px;border-radius:8px;border:1px solid #cbd5e1;font-size:1rem;background:#fff}
+input:focus,select:focus,textarea:focus{outline:2px solid rgba(37,99,235,.12);border-color:#9db7ff;box-shadow:0 0 0 3px rgba(37,99,235,.08)}
+textarea{min-height:54px;resize:vertical}
+h4{margin:0 0 6px 0;font-size:.95rem;display:inline-flex;gap:8px;align-items:center}
+h4 .tag{display:inline-block;font-size:.72rem;font-weight:800;letter-spacing:.4px;padding:2px 6px;border-radius:999px;background:#eaf1ff;color:#0b3a7a;border:1px solid #cfe0ff}
+.btn{padding:10px 14px;border-radius:10px;border:0;background:var(--accent);color:#fff;font-weight:800;cursor:pointer;margin-top:10px;font-size:.92rem;box-shadow:0 6px 12px rgba(37,99,235,.18)}
+.btn:hover{filter:brightness(1.05)} .btn:active{transform:translateY(1px)}
+.bolumkutu{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:10px;overflow:hidden}
+.bolumkutu.hesap{background:#eef6ff}
+.bolumkutu.nakit{background:#f0f9ff}
+.bolumkutu.fon{background:#fffbea}
+.bolumkutu.hisse{background:#fef7ff}
+.bolumkutu.basvuran{background:#f7faff}
+.bolumkutu.imza{background:#fafafa}
+.ek-belgeler{margin-top:8px;padding:10px 12px;border:1px dashed #94a3b8;background:#f9fafb;border-radius:10px;font-size:.86rem;overflow:hidden}
+.ek-belgeler h5{margin:0 0 8px;font-size:.92rem}
+.sorgulama-btn{display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:80%;margin-left:8px;margin-right:auto;padding:8px 10px;background:#0b7dd8;color:#fff;border-radius:8px;text-decoration:none;font-weight:700;font-size:.88rem;text-align:center;letter-spacing:.2px;box-shadow:0 4px 10px rgba(11,125,216,.18)}
+.sorgulama-btn:hover{background:#095ea8} .sorgulama-btn.disabled{pointer-events:none;opacity:.55}
+.imza-kutu{height:70px;border:1px dashed #9ca3af;border-radius:8px;background:#fff;margin-top:4px;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:.85rem}
+.dual-section{display:flex;gap:10px;flex-wrap:wrap}.dual-section>div{flex:1;min-width:0}
+.rel-row{display:flex;gap:12px;align-items:flex-end;margin-bottom:6px}
+.rel-left{flex:1;min-width:0}.rel-right{flex:0 0 180px;max-width:180px}
+.three-grid{display:grid;grid-template-columns:6fr 3fr 3fr;gap:8px}
+/* 🔹 Başvuran üçlü grid 5/12 – 2/12 – 5/12 */
+.grid-b3{display:grid;grid-template-columns:5fr 2fr 5fr;gap:8px}
+/* 🔹 Nakit iki sütun 6/12 – 6/12 */
+.grid-6x6{display:grid;grid-template-columns:6fr 6fr;gap:8px}
+.help{margin-top:6px;color:var(--muted);font-size:.84rem}
+.ek-grid{display:grid;gap:8px}.ek-grid.ek-2{grid-template-columns:1fr 1fr}.ek-grid.ek-3{grid-template-columns:1fr 1fr 1fr}
+.invalid-section{border-color:var(--err)!important;box-shadow:0 0 0 2px rgba(239,68,68,.12)}
+.invalid-input{border-color:var(--err)!important;box-shadow:0 0 0 2px rgba(239,68,68,.08)}
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:9999}
+.modal{background:#fff;border-radius:12px;max-width:700px;width:92%;padding:16px 18px;box-shadow:0 16px 40px rgba(2,6,23,.25)}
+.modal h3{margin:0 0 8px;font-size:1rem}.modal p{margin:0 0 10px;font-size:.92rem;line-height:1.35}
+.modal .row{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}.modal .btn-sec{background:#64748b}
+@page{size:A4;margin:12mm}
+@media print{
+  body{font-size:13px;background:#fff}
+  .wrap{box-shadow:none;border:none;margin:0;width:100%}
+  .btn,.sorgulama-btn{display:none!important}
+  input,textarea,select{border:1px solid #ccc!important}
+  .imza-kutu{height:60px}
+  .dual-section{gap:6px}
+}
+/* Dosya yüklemeler */
+#ek-belgeler-alani input[type="file"] { font-size: 0.92rem; }
+input[type="file"]::file-selector-button,
+input[type="file"]::-webkit-file-upload-button { font-size: 90%; }
+/* === Compact overrides === */
+.wrap{ max-width:850px; }
+.header{ padding:8px 6px; }
+.header h2{ margin:0; }
+.header p{ margin:1px 0; }
+.header h3{ margin:3px 0 0 0; line-height:1.25; }
+.card{ padding:8px 12px; }
+.bolumkutu{ padding:6px 8px; margin-top:6px; }
+.bolumkutu h4{ margin:3px 0; }
+label{ margin:2px 0 1px; }
+input,select,textarea{ padding:5px 7px; line-height:1.25; }
+textarea{ min-height:44px; }
+.rel-row{ gap:8px; margin-bottom:2px; }
+.dual-section{ gap:8px; }
+.triple-section{ gap:8px; }
+.sorgulama-btn{ padding:6px 8px; font-size:.82rem; text-align:center; }
+.imza-kutu{ height:60px; }
+.bolumkutu hr{ margin:4px 0; border-top:1px dashed #b3c6e7; }
+@page{ size:A4; margin:10mm; }
+@media print{
+  body{ font-size:13px; }
+  .wrap{ margin:0; }
+  .dual-section,.triple-section{ gap:6px; }
+}
+/* Mirasçı ekleri yan yana hizalama */
+.miras-ekler { display: flex; gap: 10px; flex-wrap: wrap; }
+.miras-ekler > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.miras-ekler input[type="file"] { width: 100%; box-sizing: border-box; }
+/* Onay ve İmza iki kolonlu düzen */
+.imza-layout { display: flex; gap: 10px; align-items: stretch; flex-wrap: wrap; }
+.imza-left { flex: 1.2; display: flex; flex-direction: column; justify-content: space-between; }
+.imza-right { flex: 0.8; display: flex; flex-direction: column; justify-content: center; }
+.imza-left input[type="text"], .imza-left input[type="date"] { width: 100%; box-sizing: border-box; }
+.imza-kutu { height: 70px; border: 1px dashed #9ca3af; border-radius: 4px; background: #fff; display: flex; align-items: center; justify-content: center; color: #6b7280; font-size: .85rem; }
+/* Form Gönder bölümü */
+.submit-row { display: flex; align-items: flex-start; gap: 10px; margin-top: 12px; }
+.submit-left { flex: 0 0 16.6%; }
+.submit-right {
+  flex: 0 0 83.3%;
+  font-size: 0.85rem; line-height: 1.3; color: #374151;
+  background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;
+  padding: 6px 10px; text-align: justify; word-wrap: break-word; overflow-wrap: break-word; white-space: normal;
+}
+@media (max-width:700px){
+  .submit-row{flex-direction:column;}
+  .submit-left,.submit-right{flex:unset;width:100%;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="print-area">
+    <div class="header">
+      <h2>YATIRIMCI TAZMİN MERKEZİ’NE</h2>
+      <p>(Formun eksiksiz doldurulması ve ıslak imzalı haliyle gönderilmesi zorunludur.)</p>
+      <h3>21 Nisan 2021 sonrası zamanaşımına uğrayan emanetlerin iadesi başvurusudur.</h3>
+      <h2 id="metinParam" style="margin-top:6px;font-size:1rem;font-weight:700;">
+        21 Nisan 2021 tarihinden sonra zamanaşımına uğrayarak Merkezinize devredilen şahsıma/vekilime ait/miras yoluyla tarafıma intikal etmesi gereken emanetlerin iadesi hususunda gereğini arz ederim.
+      </h2>
+    </div>
+
+    <div class="card">
+      <form id="form" autocomplete="off" enctype="multipart/form-data">
+
+        <!-- İlişki + e-Devlet -->
+        <div class="rel-row">
+          <div class="rel-left">
+            <label style="font-size:0.99rem;">Zamanaşımına Uğrayan Hesap Sahibi ile Başvurucu Arasındaki İlişki *</label>
+            <select name="b_yakinlik" id="b_yakinlik" required>
+              <option value="">Seçiniz</option>
+              <option value="kendisi">Kendisi</option>
+              <option value="vekili">Vekili</option>
+              <option value="mirasci">Mirasçısı</option>
+            </select>
+          </div>
+          <div class="rel-right">
+            <a id="btnSorgu" class="sorgulama-btn disabled" href="#" target="_blank" rel="noopener">e-Devlet Sorgusu</a>
+          </div>
+        </div>
+
+        <!-- Ek Belgeler -->
+        <div id="ek-belgeler-alani" class="ek-belgeler" style="display:none;"></div>
+
+        <div id="form-devami" style="display:none;">
+
+          <!-- Hesap -->
+          <div class="bolumkutu hesap" id="sec-hesap">
+            <h4><span class="tag">HESAP</span> Zamanaşımına Uğrayan Hesap Bilgileri (e-Devlet Sorgu Sonucuna Göre Doldurulacaktır)</h4>
+            <div class="three-grid" style="margin-top:6px">
+              <div>
+                <label>Adı Soyadı*</label>
+                <input type="text" id="h_adsoyad" required placeholder="Ad Soyad (Hesap Sahibi)">
+              </div>
+              <div>
+                <label>TCKN*</label>
+                <input type="text" id="h_tckn" maxlength="11" inputmode="numeric" pattern="^[0-9]{11}$" required placeholder="11 haneli TCKN">
+              </div>
+              <div>
+                <label>Hesap No*</label>
+                <input type="text" id="h_hesapno" required placeholder="Hesap Numarası">
+              </div>
+            </div>
+            <hr style="margin:8px 0;border:none;border-top:1px dashed #b3c6e7">
+            <label>Cinsi ve Nakit Tutarı</label><input type="text" id="cinsi_nakit" placeholder="TL - 1.500,00">
+            <label>Fon Adı ve Miktarı</label><input type="text" id="fon_miktar" placeholder="XYZ Fonu - 100 Adet">
+            <label>Hisse Adı ve Miktarı</label><input type="text" id="hisse_miktar" placeholder="ABC Holding - 200 Lot">
+            <div class="help">En az bir emanet türü doldurulmalıdır.</div>
+          </div>
+
+          <!-- Başvuran -->
+          <div class="bolumkutu basvuran" id="sec-basvuran">
+            <h4><span class="tag">BAŞVURAN</span> Başvuran Bilgileri</h4>
+            <div class="grid-b3" style="margin-top:6px">
+              <div>
+                <label>Adı Soyadı *</label>
+                <input type="text" id="b_adsoyad" required placeholder="Ad Soyad (Başvuran)">
+              </div>
+              <div>
+                <label>TCKN *</label>
+                <input type="text" id="b_tckn" maxlength="11" pattern="^[0-9]{11}$" required placeholder="11 haneli TCKN">
+              </div>
+              <div>
+                <label>E-posta *</label>
+                <input type="email" id="b_eposta" required placeholder="ornek@eposta.com">
+              </div>
+            </div>
+            <label style="margin-top:6px">Adres *</label>
+            <textarea id="b_adres" required placeholder="Mahalle, Cadde, No, İlçe/İl"></textarea>
+          </div>
+
+          <!-- Nakit -->
+          <div class="bolumkutu nakit" id="sec-nakit">
+            <h4><span class="tag">NAKİT</span> Nakit İade Bilgileri</h4>
+            <div class="grid-6x6" style="margin-top:6px">
+              <div>
+                <label>İade IBAN</label>
+                <input type="text" id="n_iban" placeholder="TRxxxxxxxxxxxxxxxxxxxxxx" pattern="^(TR|tr)[0-9]{24}$">
+              </div>
+              <div>
+                <label>Hesap Sahibi Ad Soyad</label>
+                <input type="text" id="n_adsoyad" placeholder="Hesap Sahibi Ad Soyad">
+              </div>
+            </div>
+          </div>
+
+          <!-- Fon + Hisse -->
+          <div class="dual-section">
+            <div class="bolumkutu fon" id="sec-fon">
+              <h4><span class="tag">FON</span> Yatırım Fonu İade Bilgileri</h4>
+              <label>Banka/Aracı Kurum Adı</label><input type="text" id="fon_banka" placeholder="Banka/Aracı kurum adı">
+              <label>Yatırım Hesap No</label><input type="text" id="fon_hesap" placeholder="Yatırım Hesap No">
+              <label>Hesap Sahibi Ad Soyad</label><input type="text" id="fon_adsoyad" placeholder="Hesap sahibi Ad Soyad">
+            </div>
+            <div class="bolumkutu hisse" id="sec-hisse">
+              <h4><span class="tag">HİSSE</span> Hisse Senedi İade Bilgileri</h4>
+              <label>Aracı Kurum Adı</label><input type="text" id="hisse_banka" placeholder="Aracı kurum adı">
+              <label>Yatırım Hesap No</label><input type="text" id="hisse_hesap" placeholder="Yatırım hesap no">
+              <label>Hesap Sahibi Ad Soyad</label><input type="text" id="hisse_adsoyad" placeholder="Hesap sahibi Ad Soyad">
+            </div>
+          </div>
+
+          <!-- Onay ve İmza -->
+          <div class="bolumkutu imza" id="sec-imza">
+            <h4>Onay ve İmza</h4>
+            <div class="imza-layout">
+              <div class="imza-left">
+                <div>
+                  <input type="text" id="imza_adsoyad" required placeholder="Başvuran Ad Soyad">
+                </div>
+                <div style="margin-top:6px;">
+                  <input type="date" id="b_tarih" readonly>
+                </div>
+              </div>
+              <div class="imza-right">
+                <div class="imza-kutu">İmza</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gönder + Beyan -->
+          <div class="submit-row">
+            <div class="submit-left">
+              <button id="btnSubmit" class="btn" type="button">Formu Gönder</button>
+              <span id="driveStatus" style="display:inline-block;margin-left:8px;font-size:.85rem;color:#374151"></span>
+            </div>
+            <div class="submit-right">
+              <strong>Beyan:</strong> Formu eksiksiz doldurduğumu, eksik veya hatalı bilgilerden
+              kaynaklı tüm ihtilaflardan ve gecikmelerden sorumlu olduğumu beyan ederim.
+              Formun ıslak imzalı çıktısını YTM’ye kargo veya posta yoluyla göndereceğimi
+              taahhüt ederim. Islak imzalı form olmadan iade işlemlerinin başlatılmayacağını
+              biliyor ve kabul ediyorum.
+            </div>
+          </div>
+
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Onay Modalı -->
+<div id="modalBackdrop" class="modal-backdrop">
+  <div class="modal">
+    <h3>Gönderim Öncesi Onay</h3>
+    <p>“Formu eksiksiz doldurduğumu, eksik veya hatalı bilgilerden kaynaklı tüm ihtilaflardan ve gecikmelerden sorumlu olduğumu beyan ederim.
+    Formun ıslak imzalı çıktısını YTM’ye kargo veya posta yoluyla göndereceğimi taahhüt ederim. Islak imzalı form olmadan iade işlemlerinin başlatılmayacağını biliyor ve kabul ediyorum.”</p>
+    <label><input type="checkbox" id="chkOnay" /> Metni okudum ve onaylıyorum.</label>
+    <div class="row">
+      <button id="btnCancel" type="button" class="btn btn-sec">Vazgeç</button>
+      <button id="btnConfirm" type="button" class="btn">Onayla ve Devam</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const TEST_MODE = true; // mevcut test akışı korunuyor
+
+  const yakinlik=document.getElementById('b_yakinlik'),
+        ekAlan=document.getElementById('ek-belgeler-alani'),
+        formDevami=document.getElementById('form-devami'),
+        hAd=document.getElementById('h_adsoyad'),
+        hTckn=document.getElementById('h_tckn'),
+        bAd=document.getElementById('b_adsoyad'),
+        bTckn=document.getElementById('b_tckn'),
+        btnSorgu=document.getElementById('btnSorgu'),
+        btn=document.getElementById('btnSubmit');
+
+  const secNakit=document.getElementById('sec-nakit');
+  const secFon=document.getElementById('sec-fon');
+  const secHisse=document.getElementById('sec-hisse');
+  const secHesap=document.getElementById('sec-hesap');
+
+  // === Google Apps Script Web App ayarı (TEK TANIM) ===
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbxa6lVpjCutLAIMdQNDejgMZdeMfj5E63JWYDqV3orINPbE_UJv3ULv8gR3RNsnruilYg/exec'; // ← Web App URL'inizi buraya yapıştırın (https://script.google.com/macros/s/...../exec)
+  const BLOCK_ON_SHEET_FAIL = false; // true: Sheet kaydı başarısızsa indirmeleri durdur
+  const driveStatusEl = document.getElementById('driveStatus');
+  function setDriveStatus(msg, ok=true){ if(!driveStatusEl) return; driveStatusEl.textContent = msg; driveStatusEl.style.color = ok? '#065f46' : '#b91c1c'; }
+
+  function todayISO(){return new Date().toISOString().slice(0,10);}  
+  window.addEventListener('DOMContentLoaded',()=>{ const t=document.getElementById('b_tarih'); if(t)t.value=todayISO(); });
+  // Drive status göstergesi
+  window.addEventListener('DOMContentLoaded', ()=>{
+    if (typeof GAS_URL !== 'undefined'){
+      if(GAS_URL){ setDriveStatus('Drive hazır'); } else { setDriveStatus('Drive ayarlanmadı (GAS_URL)', false); }
+    }
+  });
+
+  function removeInvalid(){
+    [secNakit,secFon,secHisse,secHesap].forEach(s=>s.classList.remove('invalid-section'));
+    document.querySelectorAll('.invalid-input').forEach(i=>i.classList.remove('invalid-input'));
+  }
+  function labelOf(input){
+    let lab=input.closest('.bolumkutu')?.querySelector(`label[for="${input.id}"]`);
+    if(lab) return lab.textContent.trim();
+    let prev=input.previousElementSibling;
+    while(prev && prev.tagName!=='LABEL') prev=prev.previousElementSibling;
+    return (prev?prev.textContent.trim():input.id);
+  }
+  function enableLink(url){ btnSorgu.href=url; btnSorgu.classList.remove('disabled'); }
+  function disableLink(){ btnSorgu.href="#"; btnSorgu.classList.add('disabled'); }
+
+  function setHeaderByRel(){
+    const metin = document.getElementById('metinParam');
+    if (yakinlik.value === "kendisi") {
+      metin.textContent = "21 Nisan 2021 tarihinden sonra zamanaşımına uğrayarak Merkezinize devredilen şahsıma ait emanetlerin iadesi hususunda gereğini arz ederim.";
+    } else if (yakinlik.value === "vekili") {
+      metin.textContent = "21 Nisan 2021 tarihinden sonra zamanaşımına uğrayarak Merkezinize devredilen vekilime ait emanetlerin iadesi hususunda gereğini arz ederim.";
+    } else if (yakinlik.value === "mirasci") {
+      metin.textContent = "21 Nisan 2021 tarihinden sonra zamanaşımına uğrayarak Merkezinize devredilen miras yoluyla tarafıma intikal etmesi gereken emanetlerin iadesi hususunda gereğini arz ederim.";
+    } else {
+      metin.textContent = "21 Nisan 2021 tarihinden sonra zamanaşımına uğrayarak Merkezinize devredilen şahsıma/vekilime ait/miras yoluyla tarafıma intikal etmesi gereken emanetlerin iadesi hususunda gereğini arz ederim.";
+    }
+  }
+
+  function syncSelf(){
+    bAd.value = hAd.value;
+    bTckn.value = hTckn.value;
+    document.getElementById('n_adsoyad').value = hAd.value;
+    document.getElementById('fon_adsoyad').value = hAd.value;
+    document.getElementById('hisse_adsoyad').value = hAd.value;
+  }
+  function disableSelfSync(){
+    hAd.removeEventListener('input', syncSelf);
+    hTckn.removeEventListener('input', syncSelf);
+  }
+
+  function triggerRelationChange(){
+    formDevami.style.display="block";ekAlan.style.display="block";removeInvalid();
+    let html="";
+    if(yakinlik.value==="kendisi"){
+      html = `
+        <h5>Gerekli Ekler</h5>
+        <div class="ek-grid ek-2">
+          <div class="field">
+            <label for="ek_kimlik">Ek 1: Kimlik Fotokopisi*</label>
+            <input type="file" id="ek_kimlik" accept=".jpg,.jpeg,.png,.pdf" multiple required>
+          </div>
+          <div class="field">
+            <label for="ek_kimlik2">Ek 2: Ek Belge (opsiyonel)</label>
+            <input type="file" id="ek_kimlik2" accept=".jpg,.jpeg,.png,.pdf" multiple>
+          </div>
+        </div>
+      `;
+      enableLink("https://www.turkiye.gov.tr/yatirimci-tazmin-merkezi-yatirim-kuruluslari-nezdinde-zamanasimina-ugramis-emanet-ve-alacaklari-sorgulama");
+      hAd.addEventListener('input', syncSelf);
+      hTckn.addEventListener('input', syncSelf);
+    }else if(yakinlik.value==="vekili"){
+      html = `
+        <h5>Gerekli Ekler</h5>
+        <div class="ek-grid ek-2">
+          <div class="field">
+            <label for="ek_kimlik">Ek 1: Kimlik Fotokopisi*</label>
+            <input type="file" id="ek_kimlik" accept=".jpg,.jpeg,.png,.pdf" multiple required>
+          </div>
+          <div class="field">
+            <label for="ek_vekalet">Ek 2: Vekaletname*</label>
+            <input type="file" id="ek_vekalet" accept=".jpg,.jpeg,.png,.pdf" multiple required>
+          </div>
+        </div>
+      `;
+      disableSelfSync();
+      enableLink("https://www.turkiye.gov.tr/yatirimci-tazmin-merkezi-yatirim-kuruluslari-nezdinde-zamanasimina-ugramis-emanet-ve-alacaklari-sorgulama");
+    }else if(yakinlik.value==="mirasci"){
+      html = `
+        <h5>Gerekli Ekler</h5>
+        <div class="miras-ekler">
+          <div>
+            <label>Ek 1: Kimlik Fotokopisi</label>
+            <input type="file" id="ek_kimlik" accept=".jpg,.jpeg,.png,.pdf" required>
+          </div>
+          <div>
+            <label>Ek 2: Mirasçılık Belgesi</label>
+            <input type="file" id="ek_miras" accept=".jpg,.jpeg,.png,.pdf" required>
+          </div>
+          <div>
+            <label>Ek 3: Vergi Dairesi Belgesi</label>
+            <input type="file" id="ek_vergi" accept=".jpg,.jpeg,.png,.pdf" required>
+          </div>
+        </div>
+        <label style="margin-top:6px">
+          <input type="checkbox" id="onay_miras" required> 
+          Mirasçılık belgesindeki pay oranlarına itirazım yok.
+        </label>
+        <small>jpg, png veya pdf yükleyiniz.</small>
+      `;
+      disableSelfSync();
+      enableLink("https://www.turkiye.gov.tr/yatirimci-tazmin-merkezi-yatirim-kuruluslari-nezdinde-zamanasimina-ugramis-emanet-ve-alacaklari-sorgulama-mirascisi-oldugunuz-kisi-adina");
+    }else{
+      formDevami.style.display="none";ekAlan.style.display="none";disableLink();disableSelfSync();
+    }
+    ekAlan.innerHTML=html;
+    setHeaderByRel();
+  }
+  yakinlik.addEventListener('change', triggerRelationChange);
+
+  // Tek sayfa PDF
+  async function exportSinglePagePDF(){
+    const { jsPDF } = window.jspdf;
+    const node = document.getElementById('print-area');
+    const canvas = await html2canvas(node,{scale:2,useCORS:true,background:'#ffffff',windowWidth:node.scrollWidth});
+    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+    const pdf = new jsPDF('p','pt','a4');
+    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+    const margin=18, maxW=pw-2*margin, maxH=ph-2*margin;
+    const rw = Math.min(maxW/canvas.width, maxH/canvas.height);
+    const w=canvas.width*rw, h=canvas.height*rw;
+    pdf.addImage(imgData,'JPEG',(pw-w)/2,(ph-h)/2,w,h);
+    return pdf;
+  }
+
+  // ✅ Excel (XLSX) export
+  function exportXLSX(onayZamaniISO){
+    const safe = (id)=> (document.getElementById(id)?.value ?? '').trim();
+    const filesToNames = (selector)=>{
+      const el = document.querySelector(selector);
+      if(!el) return '';
+      const names = [];
+      if (el.files && el.files.length){
+        for (let i=0;i<el.files.length;i++){ names.push(el.files[i].name); }
+      }
+      return names.join(', ');
+    };
+
+    const data = [{
+      'İlişki': (document.getElementById('b_yakinlik')?.value||''),
+      'Hesap Ad Soyad': safe('h_adsoyad'),
+      'Hesap TCKN': safe('h_tckn'),
+      'Hesap No': safe('h_hesapno'),
+      'Cinsi/Nakit': safe('cinsi_nakit'),
+      'Fon Adı/Miktarı': safe('fon_miktar'),
+      'Hisse Adı/Miktarı': safe('hisse_miktar'),
+      'Başvuran Ad Soyad': safe('b_adsoyad'),
+      'Başvuran TCKN': safe('b_tckn'),
+      'Başvuran E-posta': safe('b_eposta'),
+      'Başvuran Adres': safe('b_adres'),
+      'Nakit IBAN': safe('n_iban'),
+      'Nakit Hesap Sahibi': safe('n_adsoyad'),
+      'Fon Banka/Kurum': safe('fon_banka'),
+      'Fon Hesap No': safe('fon_hesap'),
+      'Fon Hesap Sahibi': safe('fon_adsoyad'),
+      'Hisse Aracı Kurum': safe('hisse_banka'),
+      'Hisse Hesap No': safe('hisse_hesap'),
+      'Hisse Hesap Sahibi': safe('hisse_adsoyad'),
+      'İmza Ad Soyad': safe('imza_adsoyad'),
+      'Başvuru Tarihi': safe('b_tarih'),
+      'Onay Zamanı (ISO)': onayZamaniISO || '',
+      'Ek Kimlik (adlar)': filesToNames('#ek_kimlik'),
+      'Ek Vekalet (adlar)': filesToNames('#ek_vekalet'),
+      'Ek Miras (adlar)': filesToNames('#ek_miras'),
+      'Ek Vergi (adlar)': filesToNames('#ek_vergi')
+    }];
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Basvuru');
+    const base = filenameBaseFromForm();
+    XLSX.writeFile(wb, `${base}.xlsx`);
+  }
+
+  // === CSV biriktirme (basvurular.csv) ===
+  const STORAGE_KEY = 'ytm_basvurular_rows_v1';
+  const CSV_HEADERS = [
+    'İlişki','Hesap Ad Soyad','Hesap TCKN','Hesap No','Cinsi/Nakit','Fon Adı/Miktarı','Hisse Adı/Miktarı',
+    'Başvuran Ad Soyad','Başvuran TCKN','Başvuran E-posta','Başvuran Adres',
+    'Nakit IBAN','Nakit Hesap Sahibi','Fon Banka/Kurum','Fon Hesap No','Fon Hesap Sahibi',
+    'Hisse Aracı Kurum','Hisse Hesap No','Hisse Hesap Sahibi','İmza Ad Soyad','Başvuru Tarihi','Onay Zamanı (ISO)',
+    'Ek Kimlik (adlar)','Ek Vekalet (adlar)','Ek Miras (adlar)','Ek Vergi (adlar)'
+  ];
+  function csvEscape(v){
+    const s = (v==null?'' : String(v));
+    return '"' + s.replace(/"/g,'""') + '"';
+  }
+  function toCSV(rows){
+    const head = CSV_HEADERS.map(csvEscape).join(',');
+    const body = rows.map(r => CSV_HEADERS.map(h => csvEscape(r[h] ?? '')).join(',')).join('\n');
+    return head + (rows.length ? ('\n' + body) : '');
+  }
+  function loadRows(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); }catch(e){ return []; } }
+  function saveRows(rows){ localStorage.setItem(STORAGE_KEY, JSON.stringify(rows)); }
+  function gatherRow(onayISO){
+    const val = id => (document.getElementById(id)?.value || '').trim();
+    const filesToNames = (selector)=>{ const el=document.querySelector(selector); if(!el) return ''; const names=[]; if(el.files){ for(let i=0;i<el.files.length;i++){ names.push(el.files[i].name); } } return names.join(', '); };
+    return {
+      'İlişki': (document.getElementById('b_yakinlik')?.value||''),
+      'Hesap Ad Soyad': val('h_adsoyad'),
+      'Hesap TCKN': val('h_tckn'),
+      'Hesap No': val('h_hesapno'),
+      'Cinsi/Nakit': val('cinsi_nakit'),
+      'Fon Adı/Miktarı': val('fon_miktar'),
+      'Hisse Adı/Miktarı': val('hisse_miktar'),
+      'Başvuran Ad Soyad': val('b_adsoyad'),
+      'Başvuran TCKN': val('b_tckn'),
+      'Başvuran E-posta': val('b_eposta'),
+      'Başvuran Adres': val('b_adres'),
+      'Nakit IBAN': val('n_iban'),
+      'Nakit Hesap Sahibi': val('n_adsoyad'),
+      'Fon Banka/Kurum': val('fon_banka'),
+      'Fon Hesap No': val('fon_hesap'),
+      'Fon Hesap Sahibi': val('fon_adsoyad'),
+      'Hisse Aracı Kurum': val('hisse_banka'),
+      'Hisse Hesap No': val('hisse_hesap'),
+      'Hisse Hesap Sahibi': val('hisse_adsoyad'),
+      'İmza Ad Soyad': val('imza_adsoyad'),
+      'Başvuru Tarihi': val('b_tarih'),
+      'Onay Zamanı (ISO)': onayISO || new Date().toISOString(),
+      'Ek Kimlik (adlar)': filesToNames('#ek_kimlik'),
+      'Ek Vekalet (adlar)': filesToNames('#ek_vekalet'),
+      'Ek Miras (adlar)': filesToNames('#ek_miras'),
+      'Ek Vergi (adlar)': filesToNames('#ek_vergi')
+    };
+  }
+  function downloadCSV(str, filename){
+    const blob = new Blob([str], {type:'text/csv;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0);
+  }
+  function appendRowAndDownload(onayISO){
+    const rows = loadRows();
+    rows.push(gatherRow(onayISO));
+    saveRows(rows);
+    const csv = toCSV(rows);
+    downloadCSV(csv, 'basvurular.csv');
+  }
+
+  // === Google Sheet'e gönderim (TEK FONKSİYON) ===
+  async function postToDriveSheet(rowObj){
+    if(!GAS_URL){ setDriveStatus('Drive ayarlanmadı (GAS_URL)', false); return {ok:false, error:'GAS_URL missing'}; }
+    setDriveStatus('Drive kaydı gönderiliyor...', true);
+    const ctrl = new AbortController();
+    const timer = setTimeout(()=>ctrl.abort(), 15000);
+    try{
+      const resp = await fetch(GAS_URL, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(rowObj), signal: ctrl.signal
+      });
+      clearTimeout(timer);
+      const js = await resp.json();
+      if(!resp.ok || !js.ok){ throw new Error(js.error || ('HTTP '+resp.status)); }
+      setDriveStatus('Drive kaydı başarılı', true);
+      return js;
+    }catch(e){
+      clearTimeout(timer);
+      console.error(e);
+      setDriveStatus('Drive kaydı başarısız', false);
+      return {ok:false, error:String(e)};
+    }
+  }
+
+  // Modal
+  const modal=document.getElementById('modalBackdrop');
+  const chkOnay=document.getElementById('chkOnay');
+  const btnCancel=document.getElementById('btnCancel');
+  const btnConfirm=document.getElementById('btnConfirm');
+  function openModal(){ modal.style.display='flex'; if(chkOnay) chkOnay.checked=false; }
+  function closeModal(){ modal.style.display='none'; }
+
+  // Gönder butonu: alan kontrolleri + modal
+  btn.addEventListener('click',()=>{
+    const t=document.getElementById('b_tarih'); if(t) t.value = new Date().toISOString().slice(0,10);
+    const form=document.getElementById('form'); removeInvalid();
+
+    const missing=[];
+    const visibles=[...form.querySelectorAll('[required]')].filter(el=>el.offsetParent!==null);
+    visibles.forEach(el=>{
+      let invalid=false;
+      if(el.type==='checkbox'){ invalid=!el.checked; }
+      else if(el.type==='file'){ invalid = (el.files.length===0); }
+      else { invalid=!(el.value && el.value.trim().length>0); }
+      if(invalid){ el.classList.add('invalid-input'); missing.push(`• ${labelOf(el)}`); }
+    });
+
+    const c=document.getElementById('cinsi_nakit').value.trim(),
+          f=document.getElementById('fon_miktar').value.trim(),
+          h=document.getElementById('hisse_miktar').value.trim();
+    if(!c && !f && !h){
+      ['cinsi_nakit','fon_miktar','hisse_miktar'].forEach(id=>document.getElementById(id).classList.add('invalid-input'));
+      secHesap.classList.add('invalid-section');
+      missing.push('• En az birini doldurun: Cinsi ve Nakit Tutarı, Fon Adı ve Miktarı veya Hisse Adı ve Miktarı.');
+    }
+
+    const nIban=document.getElementById('n_iban').value.trim();
+    const nName=document.getElementById('n_adsoyad').value.trim();
+    const hasNakit=(nIban||nName);
+    const fBank=document.getElementById('fon_banka').value.trim();
+    const fAcc=document.getElementById('fon_hesap').value.trim();
+    const fName=document.getElementById('fon_adsoyad').value.trim();
+    const hasFon=(fBank||fAcc||fName);
+    const hBank=document.getElementById('hisse_banka').value.trim();
+    const hAcc=document.getElementById('hisse_hesap').value.trim();
+    const hName=document.getElementById('hisse_adsoyad').value.trim();
+    const hasHisse=(hBank||hAcc||hName);
+    if(!(hasNakit||hasFon||hasHisse)){
+      [secNakit,secFon,secHisse].forEach(s=>s.classList.add('invalid-section'));
+      missing.push('• Nakit, Yatırım Fonu veya Hisse Senedi iade alanlarından en az birini doldurmalısınız.');
+    }
+
+    if(missing.length){
+      alert("Lütfen aşağıdaki eksik/hatalı alanları düzeltin:\n\n"+missing.join("\n"));
+      const firstInvalid=document.querySelector('.invalid-input, .invalid-section');
+      if(firstInvalid) firstInvalid.scrollIntoView({behavior:'smooth',block:'center'});
+      return;
+    }
+    openModal();
+  });
+
+  // Onaylandı -> PDF + Excel + CSV
+  btnCancel?.addEventListener('click', closeModal);
+  btnConfirm?.addEventListener('click', async ()=>{
+    if(!chkOnay.checked){ alert("Devam etmek için onay kutusunu işaretleyiniz."); return; }
+    closeModal();
+
+    const onayISO = new Date().toISOString();
+
+    // 0) Google Sheet'e gönder
+    const res = await postToDriveSheet(gatherRow(onayISO));
+    if(!res.ok && BLOCK_ON_SHEET_FAIL){
+      alert('Google Sheet kaydı başarısız, işlem durduruldu: '+(res.error||''));
+      return;
+    }
+
+    // 1) PDF indir
+    const pdf = await exportSinglePagePDF();
+    const base = filenameBaseFromForm();
+    pdf.save(`${base}.pdf`);
+
+    // 2) Excel indir
+    try { exportXLSX(onayISO); } catch(e){ console.error(e); alert("Excel çıktısı oluşturulurken bir sorun oluştu."); }
+
+    // 3) CSV'ye ekle ve indir (basvurular.csv)
+    try { appendRowAndDownload(onayISO); } catch(e){ console.error(e); alert("CSV güncellenirken bir sorun oluştu."); }
+
+    alert("PDF, Excel ve CSV indirildi.");
+  });
+
+  // Başlangıç
+  function setHeaderByRelInit(){ setHeaderByRel(); }
+  window.addEventListener('DOMContentLoaded', ()=>{ 
+    triggerRelationChange(); setHeaderByRelInit(); 
+    if(GAS_URL){ setDriveStatus('Drive hazır'); } else { setDriveStatus('Drive ayarlanmadı (GAS_URL)', false); }
+  });
+
+  // ===== Basit Dahili Testler (yeni) =====
+  window.YTM_TESTS = {
+    csvEscape(){
+      const got = csvEscape('a,"b",c');
+      const exp = '"a,""b"",c"';
+      console.assert(got===exp, 'csvEscape failed', {got,exp});
+    },
+    csvFormat(){
+      const sample = [{'İlişki':'kendisi','Hesap Ad Soyad':'Test','Hesap TCKN':'111','Hesap No':'HS1','Cinsi/Nakit':'','Fon Adı/Miktarı':'','Hisse Adı/Miktarı':'','Başvuran Ad Soyad':'Test','Başvuran TCKN':'111','Başvuran E-posta':'a@b.c','Başvuran Adres':'x','Nakit IBAN':'','Nakit Hesap Sahibi':'','Fon Banka/Kurum':'','Fon Hesap No':'','Fon Hesap Sahibi':'','Hisse Aracı Kurum':'','Hisse Hesap No':'','Hisse Hesap Sahibi':'','İmza Ad Soyad':'T','Başvuru Tarihi':'2025-01-01','Onay Zamanı (ISO)':'2025-01-01T00:00:00Z','Ek Kimlik (adlar)':'','Ek Vekalet (adlar)':'','Ek Miras (adlar)':'','Ek Vergi (adlar)':''}];
+      const csv = toCSV(sample);
+      console.assert(csv.split('\n').length===2, 'CSV satır sayısı 2 olmalı (başlık+1)');
+    },
+    gather(){
+      // Mevcut DOM üzerindeki TEST_MODE verisine güvenerek sadece alanların boş olmamasını doğrular
+      const row = gatherRow(new Date().toISOString());
+      console.assert(!!row['Hesap Ad Soyad'], 'gatherRow: Hesap Ad Soyad boş');
+      console.assert(!!row['Başvuran Ad Soyad'], 'gatherRow: Başvuran Ad Soyad boş');
+    }
+  };
+})();
+</script>
+
+<!-- TEST MODU: hızlı doldurma -->
+<script>
+// 🔹 "AdıSoyadı_TCKN" taban dosya adı üretir (boşsa tarihe düşer)
+function filenameBaseFromForm(){
+  const ad  = (document.getElementById('h_adsoyad')?.value || '').trim();
+  const tckn= (document.getElementById('h_tckn')?.value || '').trim();
+  const raw = `${ad}_${tckn}`.replace(/\s+/g,'_')
+    .replace(/[^A-Za-z0-9._\-çğıöşüÇĞİÖŞÜ]/g,'');
+  return raw || `ytm_${new Date().toISOString().slice(0,10)}`;
+}
+(function(){
+  const TEST_MODE = true; // orijinali bozmadan bıraktım
+  if (!TEST_MODE) return;
+  window.addEventListener('DOMContentLoaded', () => {
+    const by = (id) => document.getElementById(id);
+    const sel = by('b_yakinlik'); if (sel) { sel.value = 'kendisi'; sel.dispatchEvent(new Event('change')); }
+    if (by('h_adsoyad'))  by('h_adsoyad').value  = 'Ahmet Yılmaz';
+    if (by('h_tckn'))     by('h_tckn').value     = '12345678901';
+    if (by('h_hesapno'))  by('h_hesapno').value  = 'HS123456';
+    if (by('cinsi_nakit'))  by('cinsi_nakit').value  = 'TL - 1.500,00';
+    if (by('fon_miktar'))   by('fon_miktar').value   = 'XYZ Fonu - 100 Adet';
+    if (by('hisse_miktar')) by('hisse_miktar').value = 'ABC Holding - 200 Lot';
+    if (by('b_adsoyad')) by('b_adsoyad').value = 'Ahmet Yılmaz';
+    if (by('b_tckn'))    by('b_tckn').value    = '12345678901';
+    if (by('b_eposta'))  by('b_eposta').value  = 'test@ornek.com';
+    if (by('b_adres'))   by('b_adres').value   = 'Atatürk Bulvarı No:10, Çankaya/Ankara';
+    if (by('n_iban'))    by('n_iban').value    = 'TR120006200000000123456789';
+    if (by('n_adsoyad')) by('n_adsoyad').value = 'Ahmet Yılmaz';
+    if (by('fon_banka'))   by('fon_banka').value   = 'Ziraat Yatırım';
+    if (by('fon_hesap'))   by('fon_hesap').value   = 'FON-987654';
+    if (by('fon_adsoyad')) by('fon_adsoyad').value = 'Ahmet Yılmaz';
+    if (by('hisse_banka'))   by('hisse_banka').value   = 'Garanti Yatırım';
+    if (by('hisse_hesap'))   by('hisse_hesap').value   = 'HIS-123456';
+    if (by('hisse_adsoyad')) by('hisse_adsoyad').value = 'Ahmet Yılmaz';
+    if (by('imza_adsoyad')) by('imza_adsoyad').value = 'Ahmet Yılmaz';
+    if (by('b_tarih'))      by('b_tarih').value      = new Date().toISOString().slice(0,10);
+
+    // Ek testler (konsoldan çalıştırılabilir)
+    if (window.YTM_TESTS){
+      try{ YTM_TESTS.csvEscape(); YTM_TESTS.csvFormat(); YTM_TESTS.gather(); }catch(e){ console.warn('YTM_TESTS hata:', e); }
+    }
+  });
+})();
+</script>
+</body>
+</html>
