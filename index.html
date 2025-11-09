@@ -567,10 +567,10 @@ textarea{ min-height:44px; }
     const timer = setTimeout(()=>ctrl.abort(), 15000);
     try{
 const resp = await fetch(GAS_URL, {
-  method:'POST',
-  headers:{ 'Content-Type':'text/plain;charset=utf-8' }, // ← preflight yok
-  body: JSON.stringify(rowObj),
-  signal: ctrl.signal
+ method: 'POST',
+  mode: 'no-cors', // 👈 CORS engelini aşar
+  headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+  body: JSON.stringify(rowObj)
 });
       clearTimeout(timer);
       const js = await resp.json();
